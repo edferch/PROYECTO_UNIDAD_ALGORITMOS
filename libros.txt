@@ -1,4 +1,3 @@
 ID|Título|Autor|Año|Categoría
-1|Caperucita|Desconocido|Desconocido|Infantil
-2|Cerditos|Desconocido|Desconocido|Infantil
-3|Peter|Desconocido|Desconocido|Infantil
+2|caperucita roja|desconocido|desconocido|infantil
+3|Harry Potter|J.K. Rowling|1991|Realismo Magico

@@ -1,4 +1,2 @@
 ID|Nombre|Correo
 1|Fernando|Fernando@gmail.com
-2|Rosita|Rosita@gmail.com
-3|Javier|Javier@gmail.com
