@@ -1,2 +1,0 @@
-ID|Nombre|Correo
-1|Fernando|Fernando@gmail.com
