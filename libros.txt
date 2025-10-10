@@ -1,0 +1,4 @@
+ID|Titulo|Autor|Año|Categoria
+1|Caperucita Roja|Desconocido|1500|Infantil
+2|Los 3 cerditos|Desconocido|1800|Infantil
+3|Cenicienta|Hermanos Grimm|1500|Infantil
