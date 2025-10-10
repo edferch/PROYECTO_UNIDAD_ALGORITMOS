@@ -1,3 +1,4 @@
 ID|Título|Autor|Año|Categoría
 2|caperucita roja|desconocido|desconocido|infantil
 3|Harry Potter|J.K. Rowling|1991|Realismo Magico
+4|Biografia|Fernando|2025|Biografia
