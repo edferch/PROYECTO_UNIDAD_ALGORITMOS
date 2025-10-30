@@ -1,15 +1,16 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstdlib>
 
 using namespace std;
-
-//nombre de los archivos
+// Nombres de los archivos de base de datos
 const string ArchivoLibros = "libros.txt";
 const string ArchivoUsuarios = "usuarios.txt";
 const string ArchivoPrestamos = "prestamos.txt";
 
 //Estructuras
+//Struct de los libros
 struct Libro {
     int id = 0;
     string titulo;
@@ -18,12 +19,14 @@ struct Libro {
     string categoria;
 };
 
+//Struct de los usuarios
 struct Usuario {
     int id = 0;
     string nombre;
     string correo;
 };
 
+//Struct para los préstamos
 struct Prestamo {
     int idPrestamo = 0;
     int idUsuario = 0;
@@ -32,7 +35,16 @@ struct Prestamo {
     string fechaDevolucion;
 };
 
+// Limpia la pantalla de la consola
+void limpiarConsola() {
+#ifdef _WIN32
+    system("cls"); // Comando para Windows
+#else
+    system("clear");
+#endif
+}
 
+// Verifica si los archivos .txt existen, si no los crea
 void crearArchivo(const string& nombre, const string& encabezado) {
     ifstream leerArchivo(nombre);
     if (!leerArchivo.is_open()) {
@@ -46,15 +58,15 @@ void crearArchivo(const string& nombre, const string& encabezado) {
         leerArchivo.close();
         ofstream escribirArchivo(nombre, ios::trunc);
         escribirArchivo << encabezado << endl;
-        cout << "Encabezado escrito en archivo existente: " << nombre << endl;
     }
 }
 
+// Lee un archivo, busca el ID mas alto y suma +1 para generar el nuevo ID
 int generarID(const string& nombreArchivo) {
     ifstream leerArchivo(nombreArchivo);
     if (!leerArchivo.is_open()) return 1;
     string texto;
-    if (!getline(leerArchivo, texto)) { leerArchivo.close(); return 1; }
+    if (!getline(leerArchivo, texto)) { leerArchivo.close(); return 1; } // Salta el encabezado
     int maxId = 0;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -70,6 +82,7 @@ int generarID(const string& nombreArchivo) {
     return maxId + 1;
 }
 
+// Divide una línea de texto (del archivo) en un array usando '|' como separador
 void separarCampos(const string& linea, string campos[], int maxCampos) {
     size_t prev = 0;
     int indice = 0;
@@ -82,10 +95,13 @@ void separarCampos(const string& linea, string campos[], int maxCampos) {
         campos[indice++] = linea.substr(prev, posicion - prev);
         prev = posicion + 1;
     }
+    // Limpia los campos restantes si la línea tenía menos separadores
     for (int i = indice; i < maxCampos; i++) campos[i] = "";
 }
 
-//Funciones del libro
+//Funciones del libros
+
+// Pide datos al usuario y los guarda en libros.txt
 void agregarLibro() {
     Libro nuevoLibro;
     nuevoLibro.id = generarID(ArchivoLibros);
@@ -103,11 +119,12 @@ void agregarLibro() {
     cout << endl << "Libro agregado correctamente" << endl;
 }
 
+// Lee libros.txt y muestra todos los registross
 void listarLibros() {
     ifstream leerArchivo(ArchivoLibros);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo" << endl; return; }
     string texto;
-    if (!getline(leerArchivo, texto)) { cout << "Archivo de libros vacío" << endl; leerArchivo.close(); return; }
+    if (!getline(leerArchivo, texto)) { cout << "Archivo de libros vacío" << endl; leerArchivo.close(); return; } // Salta encabezado
     cout << endl << "===LIBROS=== " << endl;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -117,16 +134,23 @@ void listarLibros() {
             << " | Año: " << campos[3] << " | Cat: " << campos[4] << endl;
     }
     leerArchivo.close();
+
+    cout << endl << "Presione Enter para continuar...";
+    string dummy;
+    getline(cin, dummy);
 }
 
+// Modifica un libro existente buscándolo por ID
 void modificarLibro() {
     cout << endl << "===MODIFICAR LIBRO=== \n Ingrese ID: ";
     string idStr; getline(cin, idStr);
     ifstream leerArchivo(ArchivoLibros);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo" << endl; return; }
-    ofstream escribirTemp("tmp_libros.txt");
+    ofstream escribirTemp("tmp_libros.txt"); // Archivo temporal para escribir cambios
     if (!escribirTemp.is_open()) { cout << "Error creando archivo temporal" << endl; leerArchivo.close(); return; }
+
     string header; getline(leerArchivo, header); escribirTemp << header << endl;
+
     string texto; bool encontrado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -135,6 +159,7 @@ void modificarLibro() {
         if (campos[0] == idStr) {
             encontrado = true;
             string tituloN, autorN, anioN, categoriaN;
+            // Pide nuevos datos. Si se presiona Enter, conserva el dato actual.
             cout << "Titulo (actual: " << campos[1] << "): "; getline(cin, tituloN);
             cout << "Autor (actual: " << campos[2] << "): "; getline(cin, autorN);
             cout << "Año (actual: " << campos[3] << "): "; getline(cin, anioN);
@@ -146,17 +171,22 @@ void modificarLibro() {
             escribirTemp << campos[0] << "|" << tituloN << "|" << autorN << "|" << anioN << "|" << categoriaN << endl;
         }
         else {
+            // Copia las líneas que no se modifican
             escribirTemp << texto << endl;
         }
     }
     leerArchivo.close();
     escribirTemp.close();
+
     if (!encontrado) { remove("tmp_libros.txt"); cout << "No se encontro el libro" << endl; return; }
+
+    // Reemplaza el archivo original por el temporal
     remove(ArchivoLibros.c_str());
     rename("tmp_libros.txt", ArchivoLibros.c_str());
     cout << endl << "LIBRO MODIFICADO CORRECTAMENTE" << endl;
 }
 
+// Elimina un libro buscándolo por ID
 void eliminarLibro() {
     cout << endl << "===ELIMINAR LIBRO=== \nIngrese ID: ";
     string idStr; getline(cin, idStr);
@@ -164,24 +194,35 @@ void eliminarLibro() {
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo" << endl; return; }
     ofstream escribirTemp("tmp_libros.txt");
     if (!escribirTemp.is_open()) { cout << "Error creando archivo temporal" << endl; leerArchivo.close(); return; }
-    string header; getline(leerArchivo, header); escribirTemp << header << endl;
+
+    string header; getline(leerArchivo, header); escribirTemp << header << endl; 
+
     string texto; bool eliminado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
         string campos[5];
         separarCampos(texto, campos, 5);
-        if (campos[0] == idStr) eliminado = true;
-        else escribirTemp << texto << endl;
+        if (campos[0] == idStr) {
+            eliminado = true; // Marca como eliminado y NO lo copia al archivo temporal
+        }
+        else {
+            escribirTemp << texto << endl; // Copia las demás líneas
+        }
     }
     leerArchivo.close();
     escribirTemp.close();
+
     if (!eliminado) { remove("tmp_libros.txt"); cout << "No se encontro el libro" << endl; return; }
+
+    // Reemplaza el archivo original
     remove(ArchivoLibros.c_str());
     rename("tmp_libros.txt", ArchivoLibros.c_str());
     cout << endl << "LIBRO ELIMINADO CORRECTAMENTE" << endl;
 }
 
 //Usuarios
+
+// Pide datos y registra un nuevo usuario en usuarios.txt
 void agregarUsuario() {
     Usuario nuevoUsuario; nuevoUsuario.id = generarID(ArchivoUsuarios);
     cout << endl << "===REGISTRAR USUARIO (ID " << nuevoUsuario.id << ")===" << endl;
@@ -194,6 +235,7 @@ void agregarUsuario() {
     cout << endl << "USUARIO REGISTRADO CORRECTAMENTE" << endl;
 }
 
+// Muestra todos los usuarios registrados
 void listarUsuarios() {
     ifstream leerArchivo(ArchivoUsuarios);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo" << endl; return; }
@@ -207,16 +249,23 @@ void listarUsuarios() {
         cout << "ID: " << campos[0] << " | Nombre: " << campos[1] << " | Correo: " << campos[2] << endl;
     }
     leerArchivo.close();
+
+    cout << endl << "Presione Enter para continuar...";
+    string dummy;
+    getline(cin, dummy);
 }
 
+// Modifica un usuario existente (usa la misma lógica de archivo temporal)
 void modificarUsuario() {
-    cout << endl <<  "===MODIFICAR USUARIO=== \nIngrese ID: ";
+    cout << endl << "===MODIFICAR USUARIO=== \nIngrese ID: ";
     string idStr; getline(cin, idStr);
     ifstream leerArchivo(ArchivoUsuarios);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo" << endl; return; }
     ofstream escribirTemp("tmp_usuarios.txt");
     if (!escribirTemp.is_open()) { cout << "Error creando archivo temporal" << endl; leerArchivo.close(); return; }
+
     string header; getline(leerArchivo, header); escribirTemp << header << endl;
+
     string texto; bool encontrado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -237,12 +286,15 @@ void modificarUsuario() {
     }
     leerArchivo.close();
     escribirTemp.close();
+
     if (!encontrado) { remove("tmp_usuarios.txt"); cout << "No se encontro al usuario" << endl; return; }
+
     remove(ArchivoUsuarios.c_str());
     rename("tmp_usuarios.txt", ArchivoUsuarios.c_str());
     cout << endl << "USUARIO MODIFICADO CORRECTAMENTE" << endl;
 }
 
+// Elimina un usuario (usa la misma lógica de archivo temporal)
 void eliminarUsuario() {
     cout << endl << "===ELIMINAR USUARIO=== \nIngrese ID: ";
     string idStr; getline(cin, idStr);
@@ -250,7 +302,9 @@ void eliminarUsuario() {
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo" << endl; return; }
     ofstream escribirTemp("tmp_usuarios.txt");
     if (!escribirTemp.is_open()) { cout << "Error creando archivo temporal" << endl; leerArchivo.close(); return; }
+
     string header; getline(leerArchivo, header); escribirTemp << header << endl;
+
     string texto; bool eliminado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -261,17 +315,22 @@ void eliminarUsuario() {
     }
     leerArchivo.close();
     escribirTemp.close();
+
     if (!eliminado) { remove("tmp_usuarios.txt"); cout << "No se encontro al usuario" << endl; return; }
+
     remove(ArchivoUsuarios.c_str());
     rename("tmp_usuarios.txt", ArchivoUsuarios.c_str());
     cout << endl << "USUARIO ELIMINADO CORRECTAMENTE" << endl;
 }
 
 //Prestamos
+
+// Revisa prestamos.txt para ver si un libro no ha sido devuelto
 bool libroDisponible(int idLibro) {
     ifstream leerArchivo(ArchivoPrestamos);
-    if (!leerArchivo.is_open()) return true;
+    if (!leerArchivo.is_open()) return true; // Si el archivo no existe está disponible
     string texto; getline(leerArchivo, texto);
+
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
         string campos[5];
@@ -279,12 +338,18 @@ bool libroDisponible(int idLibro) {
         int libroID = 0;
         try { libroID = stoi(campos[2]); }
         catch (...) { libroID = -1; }
-        if (libroID == idLibro && campos[4].empty()) { leerArchivo.close(); return false; }
+
+        // Si el ID del libro coincide Y la fecha de devolución (campos[4]) está vacía
+        if (libroID == idLibro && campos[4].empty()) {
+            leerArchivo.close();
+            return false; // No está disponible
+        }
     }
     leerArchivo.close();
-    return true;
+    return true; // Sí está disponible
 }
 
+// Registra un nuevo préstamo en prestamos.txt
 void registrarPrestamo() {
     cout << endl << "===REGISTRAR PRESTAMO===" << endl;
     cout << "ID Usuario: "; string idUsuarioStr; getline(cin, idUsuarioStr);
@@ -299,15 +364,21 @@ void registrarPrestamo() {
     try { idLibro = stoi(idLibroStr); }
     catch (...) { idLibro = 0; }
 
-    if (!libroDisponible(idLibro)) { cout << "El libro ID " << idLibro << " no esta disponible" << endl; return; }
+    // Verifica la disponibilidad antes de registrar
+    if (!libroDisponible(idLibro)) {
+        cout << "El libro ID " << idLibro << " no esta disponible" << endl;
+        return;
+    }
 
     ofstream escribirArchivo(ArchivoPrestamos, ios::app);
     if (!escribirArchivo.is_open()) { cout << "Error abriendo archivo de prestamos." << endl; return; }
+    // La fecha de devolución se deja vacía
     escribirArchivo << idPrestamo << "|" << idUsuario << "|" << idLibro << "|" << fechaPrestamo << "|" << "" << endl;
     escribirArchivo.close();
     cout << endl << "PRESTAMO REGISTRADO CORRECTAMENTE" << endl;
 }
 
+// Busca un préstamo activo (por ID de libro) y le añade la fecha de devolución
 void registrarDevolucion() {
     cout << endl << "===REGISTRAR DEVOLUCION===" << endl;
     cout << "ID Libro a devolver: ";
@@ -316,27 +387,36 @@ void registrarDevolucion() {
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo de prestamos" << endl; return; }
     ofstream escribirTemp("tmp_prestamos.txt");
     if (!escribirTemp.is_open()) { cout << "Error creando archivo temporal" << endl; leerArchivo.close(); return; }
+
     string header; getline(leerArchivo, header); escribirTemp << header << endl;
+
     string texto; bool encontrado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
         string campos[5];
         separarCampos(texto, campos, 5);
+
+        // Busca el libro que NO tenga fecha de devolución
         if (campos[2] == idLibroStr && campos[4].empty()) {
             encontrado = true;
             cout << "Ingrese fecha de devolucion (dia/mes/año): ";
-            getline(cin, campos[4]);
+            getline(cin, campos[4]); // Añade la fecha de devolución
         }
+        // Escribe la línea (modificada o no) en el temporal
         escribirTemp << campos[0] << "|" << campos[1] << "|" << campos[2] << "|" << campos[3] << "|" << campos[4] << endl;
     }
     leerArchivo.close();
     escribirTemp.close();
+
     if (!encontrado) { remove("tmp_prestamos.txt"); cout << "No se encontro prestamo activo para el libro ID " << idLibroStr << "." << endl; return; }
+
+    // Reemplaza el archivo
     remove(ArchivoPrestamos.c_str());
     rename("tmp_prestamos.txt", ArchivoPrestamos.c_str());
     cout << endl << "DEVOLUCION REGISTRADA CORRECTAMENTE" << endl;
 }
 
+// Muestra el historial de préstamos de un usuario específico
 void consultarPrestamosUsuario() {
     cout << endl << "===CONSULTAR PRESTAMO DE USUARIO===" << endl;
     cout << "ID Usuario: ";
@@ -347,7 +427,8 @@ void consultarPrestamosUsuario() {
 
     ifstream leerArchivo(ArchivoPrestamos);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo de prestamos" << endl; return; }
-    string texto; getline(leerArchivo, texto);
+    string texto; getline(leerArchivo, texto); // Salta encabezado
+
     bool tienePrestamos = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -356,6 +437,7 @@ void consultarPrestamosUsuario() {
         int usuarioID = 0;
         try { usuarioID = stoi(campos[1]); }
         catch (...) { usuarioID = -1; }
+
         if (usuarioID == idUsuario) {
             tienePrestamos = true;
             cout << "ID Prestamo: " << campos[0] << " | Libro ID: " << campos[2]
@@ -365,9 +447,16 @@ void consultarPrestamosUsuario() {
     }
     if (!tienePrestamos) cout << "EL USUARIO NO TIENE PRESTAMOS" << endl;
     leerArchivo.close();
+
+    // Pausa
+    cout << endl << "Presione Enter para continuar...";
+    string dummy;
+    getline(cin, dummy);
 }
 
-//Consultas
+//Consulta
+
+// Busca libros por título, autor o categoría
 void consultarLibros() {
     cout << endl << "===CONSULTAR LIBROS===" << endl;
     cout << "Buscar por:\n1 - Titulo\n2 - Autor\n3 - Categoria\nOpcion: ";
@@ -378,15 +467,19 @@ void consultarLibros() {
     ifstream leerArchivo(ArchivoLibros);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo de libros" << endl; return; }
     string texto; getline(leerArchivo, texto);
+
     bool encontrado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
         string campos[5];
         separarCampos(texto, campos, 5);
         bool match = false;
+
+        // .find() busca si el texto está contenido
         if (opcion == "1" && campos[1].find(busqueda) != string::npos) match = true;
         if (opcion == "2" && campos[2].find(busqueda) != string::npos) match = true;
         if (opcion == "3" && campos[4].find(busqueda) != string::npos) match = true;
+
         if (match) {
             encontrado = true;
             cout << "ID: " << campos[0] << " | Titulo: " << campos[1] << " | Autor: " << campos[2]
@@ -395,8 +488,14 @@ void consultarLibros() {
     }
     if (!encontrado) cout << "NO SE ENCONTRARON LIBROS QUE COINCIDAB" << endl;
     leerArchivo.close();
+
+    // Pausa
+    cout << endl << "Presione Enter para continuar...";
+    string dummy;
+    getline(cin, dummy);
 }
 
+// Busca usuarios por ID exacto o nombre parcial
 void consultarUsuarios() {
     cout << endl << "===CONSULTAR USUARIO===" << endl;
     cout << "Buscar por:\n1 - ID\n2 - Nombre\nOpcion: ";
@@ -406,15 +505,18 @@ void consultarUsuarios() {
 
     ifstream leerArchivo(ArchivoUsuarios);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo de usuarios" << endl; return; }
-    string texto; getline(leerArchivo, texto);
+    string texto; getline(leerArchivo, texto); 
+
     bool encontrado = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
         string campos[3];
         separarCampos(texto, campos, 3);
         bool match = false;
-        if (opcion == "1" && campos[0] == busqueda) match = true;
-        if (opcion == "2" && campos[1].find(busqueda) != string::npos) match = true;
+
+        if (opcion == "1" && campos[0] == busqueda) match = true; // Búsqueda exacta
+        if (opcion == "2" && campos[1].find(busqueda) != string::npos) match = true; // Búsqueda parcial
+
         if (match) {
             encontrado = true;
             cout << "ID: " << campos[0] << " | Nombre: " << campos[1] << " | Correo: " << campos[2] << endl;
@@ -422,13 +524,20 @@ void consultarUsuarios() {
     }
     if (!encontrado) cout << "NO SE ENCONTRARON USUARIOS QUE COINCIDAN" << endl;
     leerArchivo.close();
+
+    // Pausa
+    cout << endl << "Presione Enter para continuar...";
+    string dummy;
+    getline(cin, dummy);
 }
 
+// Muestra solo los libros que no están actualmente prestados
 void listarLibrosDisponibles() {
     cout << endl << "===LIBROS DISPONIBLES===" << endl;
     ifstream leerArchivo(ArchivoLibros);
     if (!leerArchivo.is_open()) { cout << "No se puede abrir archivo de libros" << endl; return; }
     string texto; getline(leerArchivo, texto);
+
     bool alguno = false;
     while (getline(leerArchivo, texto)) {
         if (texto.empty()) continue;
@@ -437,6 +546,8 @@ void listarLibrosDisponibles() {
         int libroID = 0;
         try { libroID = stoi(campos[0]); }
         catch (...) { libroID = -1; }
+
+        // Llama a la función de ayuda para verificar disponibilidad
         if (libroDisponible(libroID)) {
             alguno = true;
             cout << "ID: " << campos[0] << " | Titulo: " << campos[1] << " | Autor: " << campos[2]
@@ -445,11 +556,19 @@ void listarLibrosDisponibles() {
     }
     if (!alguno) cout << "NO HAY LIBROS DISPONIBLES" << endl;
     leerArchivo.close();
+
+    // Pausa
+    cout << endl << "Presione Enter para continuar...";
+    string dummy;
+    getline(cin, dummy);
 }
 
-//MEnus
+//Menús
+
+// Menú de gestión de libros
 void menuLibros() {
     while (true) {
+        limpiarConsola();
         cout << endl << "===MENU LIBROS===" << endl;
         cout << "1 - Agregar libro" << endl;
         cout << "2 - Modificar libro" << endl;
@@ -467,8 +586,10 @@ void menuLibros() {
     }
 }
 
+// Menú de gestión de usuarios
 void menuUsuarios() {
     while (true) {
+        limpiarConsola();
         cout << endl << "===MENU USUARIOS===" << endl;
         cout << "1 - Agregar usuario" << endl;
         cout << "2 - Modificar usuario" << endl;
@@ -486,8 +607,10 @@ void menuUsuarios() {
     }
 }
 
+// Menú de gestión de préstamos
 void menuPrestamos() {
     while (true) {
+        limpiarConsola();
         cout << endl << "===MENU PRESTAMOS===" << endl;
         cout << "1 - Registrar prestamo" << endl;
         cout << "2 - Registrar devolucin" << endl;
@@ -501,9 +624,11 @@ void menuPrestamos() {
     }
 }
 
+// Menú de consultas y búsquedas
 void menuConsultas() {
     while (true) {
-        cout << endl << "===MENU PRESTAMOS===" << endl;
+        limpiarConsola();
+        cout << endl << "===MENU CONSULTAS===" << endl;
         cout << "1 - Consultar prestamos de un usuario" << endl;
         cout << "2 - Consultar libros por titulo/autor/categoria" << endl;
         cout << "3 - Consultar usuarios por nombre/ID" << endl;
@@ -520,16 +645,18 @@ void menuConsultas() {
     }
 }
 
-//Iniciar sistema
+// Prepara los archivos .txt al iniciar el programa
 void inicializarSistema() {
     crearArchivo(ArchivoLibros, "ID|Titulo|Autor|Año|Categoria");
     crearArchivo(ArchivoUsuarios, "ID|Nombre|Correo");
     crearArchivo(ArchivoPrestamos, "IDPrestamo|IDUsuario|IDLibro|FechaPrestamo|FechaDevolucion");
 }
 
+// Función principal que ejecuta el programa
 int main() {
-    inicializarSistema();
+    inicializarSistema(); // Prepara los archivos
     while (true) {
+        limpiarConsola();
         cout << endl << "===MENU PRINCIPAL===" << endl;
         cout << "1 - Libros" << endl;
         cout << "2 - Usuarios" << endl;
@@ -542,7 +669,7 @@ int main() {
         else if (opcion == "2") menuUsuarios();
         else if (opcion == "3") menuPrestamos();
         else if (opcion == "4") menuConsultas();
-        else if (opcion == "0") { cout << "Saliendo..." << endl; break; }
+        else if (opcion == "0") { cout << "Saliendo..." << endl; break; } // Termina el programa
         else cout << "OPCION INVALIDA" << endl;
     }
     return 0;
